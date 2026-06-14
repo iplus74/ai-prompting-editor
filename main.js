@@ -161,7 +161,12 @@ ipcMain.handle('save-markdown', async (event, { filePath, content, categoryPath,
               current[cate] = {};
             }
             if (i === categories.length - 1) {
-              current[cate]['prompt'] = [filePath];
+              let relativePath = path.relative(path.dirname(mappingFilePath), filePath);
+              relativePath = relativePath.replace(/\\/g, '/');
+              if (!relativePath.startsWith('.') && !relativePath.startsWith('/')) {
+                relativePath = './' + relativePath;
+              }
+              current[cate]['prompt'] = [relativePath];
               if (images && images.length > 0) {
                 current[cate]['images'] = images;
               }
