@@ -15,9 +15,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeSettingsBtn = document.getElementById('close-settings-btn');
   const saveSettingsBtn = document.getElementById('save-settings-btn');
   const mappingFilePathInput = document.getElementById('mapping-file-path');
+  const taskTargetListInput = document.getElementById('task-target-list');
+  const orchPathInput = document.getElementById('orch-path');
+  const taskTargetSelect = document.getElementById('task-target');
+  const jobRequestBtn = document.getElementById('job-request-btn');
+  const categoryPathInput = document.getElementById('category-path');
+  const taskTimeoutInput = document.getElementById('task-timeout');
+  let isSaved = false;
 
   settingsBtn.addEventListener('click', () => {
     mappingFilePathInput.value = localStorage.getItem('mappingFilePath') || '';
+    taskTargetListInput.value = localStorage.getItem('taskTargetList') || '';
+    orchPathInput.value = localStorage.getItem('orchPath') || '';
     settingsModal.style.display = 'flex';
   });
 
@@ -27,8 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   saveSettingsBtn.addEventListener('click', () => {
     localStorage.setItem('mappingFilePath', mappingFilePathInput.value.trim());
+    localStorage.setItem('taskTargetList', taskTargetListInput.value.trim());
+    localStorage.setItem('orchPath', orchPathInput.value.trim());
     settingsModal.style.display = 'none';
     showStatus('환경설정이 저장되었습니다.');
+    updateTaskTargetSelect();
+    checkJobRequestEnable();
   });
 
   mappingFilePathInput.addEventListener('click', async (e) => {
@@ -40,6 +53,72 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       console.error(err);
+    }
+  });
+
+  orchPathInput.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      const response = await window.api.selectOrchDir();
+      if (response && response.success) {
+        orchPathInput.value = response.filePath;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  function updateTaskTargetSelect() {
+    const targetsStr = localStorage.getItem('taskTargetList') || '';
+    const targets = targetsStr.split(',').map(s => s.trim()).filter(Boolean);
+    const currentValue = taskTargetSelect.value;
+    taskTargetSelect.innerHTML = '';
+    targets.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      taskTargetSelect.appendChild(opt);
+    });
+    if (targets.includes(currentValue)) {
+      taskTargetSelect.value = currentValue;
+    } else if (targets.length > 0) {
+      taskTargetSelect.value = targets[0];
+    }
+  }
+  updateTaskTargetSelect();
+
+  function checkJobRequestEnable() {
+    const hasCategory = categoryPathInput.value.trim().length > 0;
+    const hasTarget = taskTargetSelect.value && taskTargetSelect.value.trim().length > 0;
+    
+    if (hasCategory && hasTarget && isSaved) {
+      jobRequestBtn.disabled = false;
+    } else {
+      jobRequestBtn.disabled = true;
+    }
+  }
+
+  categoryPathInput.addEventListener('input', checkJobRequestEnable);
+  taskTargetSelect.addEventListener('change', checkJobRequestEnable);
+
+  jobRequestBtn.addEventListener('click', async () => {
+    const orchPath = localStorage.getItem('orchPath') || '';
+    if (!orchPath) {
+      alert('환경설정에서 Orchestrator 경로를 설정해주세요.');
+      return;
+    }
+    const targetName = taskTargetSelect.value;
+    const timeoutMs = taskTimeoutInput.value.trim() || '300000';
+    
+    try {
+      const response = await window.api.runOrchCommand({ orchPath, targetName, timeoutMs });
+      if (response.success) {
+        showStatus('작업 요청 터미널이 실행되었습니다.');
+      } else {
+        showStatus(`터미널 실행 실패: ${response.message}`, true);
+      }
+    } catch(err) {
+      showStatus(`오류 발생: ${err.message}`, true);
     }
   });
 
@@ -468,6 +547,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.success) {
         showStatus(`${response.message} (${response.filePath})`);
         document.getElementById('file-path').value = response.filePath; // Update path if selected via dialog
+        isSaved = true;
+        checkJobRequestEnable();
       } else {
         showStatus(`저장 실패: ${response.message}`, true);
       }
@@ -492,6 +573,8 @@ document.addEventListener('DOMContentLoaded', () => {
       addRequirement('', '');
       renderAttachments();
       renderRequirements();
+      isSaved = false;
+      checkJobRequestEnable();
     });
   }
 
@@ -574,12 +657,16 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAttachments();
         renderRequirements();
       }
+      isSaved = true;
+      checkJobRequestEnable();
     });
   }
 
   if (window.api && window.api.onOpenSettings) {
     window.api.onOpenSettings(() => {
       mappingFilePathInput.value = localStorage.getItem('mappingFilePath') || '';
+      taskTargetListInput.value = localStorage.getItem('taskTargetList') || '';
+      orchPathInput.value = localStorage.getItem('orchPath') || '';
       settingsModal.style.display = 'flex';
     });
   }

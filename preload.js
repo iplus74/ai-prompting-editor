@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('api', {
   selectAndCopyAttachment: () => ipcRenderer.invoke('select-and-copy-attachment'),
   selectSavePath: () => ipcRenderer.invoke('select-save-path'),
   selectMappingFile: () => ipcRenderer.invoke('select-mapping-file'),
+  selectOrchDir: () => ipcRenderer.invoke('select-orch-dir'),
+  runOrchCommand: (data) => ipcRenderer.invoke('run-orch-command', data),
   onFileNew: (callback) => ipcRenderer.on('file-new', callback),
   onFileOpen: (callback) => ipcRenderer.on('file-open', (event, data) => callback(data)),
   onOpenSettings: (callback) => ipcRenderer.on('open-settings', callback)

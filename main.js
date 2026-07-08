@@ -247,3 +247,61 @@ ipcMain.handle('select-mapping-file', async () => {
   }
   return { success: true, filePath: filePaths[0] };
 });
+
+// IPC Handler for selecting orchestrator directory
+ipcMain.handle('select-orch-dir', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: 'Select Orchestrator Directory',
+    properties: ['openDirectory']
+  });
+  
+  if (canceled || filePaths.length === 0) {
+    return { success: false };
+  }
+  return { success: true, filePath: filePaths[0] };
+});
+
+// IPC Handler for running orch command
+ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeoutMs }) => {
+  try {
+    const timeout = timeoutMs || '300000';
+    
+    return new Promise((resolve) => {
+      const { exec } = require('child_process');
+      const isWin = process.platform === 'win32';
+      
+      if (isWin) {
+        // Windows 환경: cmd 창을 열고 명령어 실행 후 유지(/K)
+        const cmd = `start cmd.exe /K "npm --prefix \\"${orchPath}\\" run orch -- --target-name \\"${targetName}\\" --timeout-ms ${timeout}"`;
+        exec(cmd, (error) => {
+          if (error) {
+            console.error('Error executing cmd:', error);
+            resolve({ success: false, message: error.message });
+          } else {
+            resolve({ success: true });
+          }
+        });
+      } else {
+        // Mac 환경: AppleScript로 Terminal 앱 실행
+        const script = `
+          tell application "Terminal"
+            activate
+            do script "npm --prefix \\"${orchPath}\\" run orch -- --target-name \\"${targetName}\\" --timeout-ms ${timeout}"
+          end tell
+        `;
+        exec(`osascript -e '${script}'`, (error) => {
+          if (error) {
+            console.error('Error executing osascript:', error);
+            resolve({ success: false, message: error.message });
+          } else {
+            resolve({ success: true });
+          }
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Run orch error:', error);
+    return { success: false, message: error.message };
+  }
+});
+
