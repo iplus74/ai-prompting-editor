@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const orchPathInput = document.getElementById('orch-path');
   const taskTargetSelect = document.getElementById('task-target');
   const jobRequestBtn = document.getElementById('job-request-btn');
+  const applyWorkflowBtn = document.getElementById('apply-workflow-btn');
   const categoryPathInput = document.getElementById('category-path');
   const taskTimeoutInput = document.getElementById('task-timeout');
   let isSaved = false;
@@ -100,6 +101,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   categoryPathInput.addEventListener('input', checkJobRequestEnable);
   taskTargetSelect.addEventListener('change', checkJobRequestEnable);
+
+  applyWorkflowBtn.addEventListener('click', async () => {
+    const orchPath = localStorage.getItem('orchPath') || '';
+    if (!orchPath) {
+      alert('환경설정에서 Orchestrator 경로를 설정해주세요.');
+      return;
+    }
+    const categoryPath = categoryPathInput.value.trim();
+    if (!categoryPath) {
+      alert('카테고리 경로를 입력해주세요.');
+      return;
+    }
+    try {
+      const response = await window.api.applyWorkflow({ orchPath, categoryPath });
+      if (response.success) {
+        showStatus('workflow.default.json이 업데이트되었습니다.');
+      } else {
+        showStatus(`workflow 적용 실패: ${response.message}`, true);
+      }
+    } catch (err) {
+      showStatus(`오류 발생: ${err.message}`, true);
+    }
+  });
 
   jobRequestBtn.addEventListener('click', async () => {
     const orchPath = localStorage.getItem('orchPath') || '';

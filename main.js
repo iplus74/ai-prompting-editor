@@ -305,3 +305,40 @@ ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeout
   }
 });
 
+// IPC Handler for applying workflow (update mcp.args.category in workflow.default.json)
+ipcMain.handle('apply-workflow', async (event, { orchPath, categoryPath }) => {
+  try {
+    if (!orchPath) {
+      return { success: false, message: 'Orchestrator 경로가 설정되지 않았습니다.' };
+    }
+    if (!categoryPath) {
+      return { success: false, message: '카테고리 경로가 입력되지 않았습니다.' };
+    }
+
+    const workflowFilePath = path.join(orchPath, 'workflow.default.json');
+
+    if (!fs.existsSync(workflowFilePath)) {
+      return { success: false, message: `workflow.default.json 파일을 찾을 수 없습니다: ${workflowFilePath}` };
+    }
+
+    const fileData = fs.readFileSync(workflowFilePath, 'utf8');
+    let workflowJson = JSON.parse(fileData);
+
+    if (!Array.isArray(workflowJson) || workflowJson.length === 0) {
+      return { success: false, message: 'workflow.default.json 형식이 올바르지 않습니다 (배열이어야 합니다).' };
+    }
+
+    const firstStep = workflowJson[0];
+    if (!firstStep.mcp || !firstStep.mcp.args || firstStep.mcp.args.category === undefined) {
+      return { success: false, message: '첫 번째 요소에 mcp.args.category가 존재하지 않습니다.' };
+    }
+
+    firstStep.mcp.args.category = categoryPath;
+    fs.writeFileSync(workflowFilePath, JSON.stringify(workflowJson, null, 2), 'utf8');
+
+    return { success: true, message: 'workflow.default.json이 업데이트되었습니다.' };
+  } catch (error) {
+    console.error('Apply workflow error:', error);
+    return { success: false, message: error.message };
+  }
+});

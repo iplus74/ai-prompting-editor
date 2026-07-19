@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   selectMappingFile: () => ipcRenderer.invoke('select-mapping-file'),
   selectOrchDir: () => ipcRenderer.invoke('select-orch-dir'),
   runOrchCommand: (data) => ipcRenderer.invoke('run-orch-command', data),
+  applyWorkflow: (data) => ipcRenderer.invoke('apply-workflow', data),
   onFileNew: (callback) => ipcRenderer.on('file-new', callback),
   onFileOpen: (callback) => ipcRenderer.on('file-open', (event, data) => callback(data)),
   onOpenSettings: (callback) => ipcRenderer.on('open-settings', callback)
