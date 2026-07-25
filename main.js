@@ -269,6 +269,7 @@ ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeout
     return new Promise((resolve) => {
       const { exec } = require('child_process');
       const isWin = process.platform === 'win32';
+      const isMac = process.platform === 'darwin';
       
       if (isWin) {
         // Windows 환경: cmd 창을 열고 명령어 실행 후 유지(/K)
@@ -281,7 +282,7 @@ ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeout
             resolve({ success: true });
           }
         });
-      } else {
+      } else if (isMac) {
         // Mac 환경: AppleScript로 Terminal 앱 실행
         const script = `
           tell application "Terminal"
@@ -293,6 +294,17 @@ ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeout
           if (error) {
             console.error('Error executing osascript:', error);
             resolve({ success: false, message: error.message });
+          } else {
+            resolve({ success: true });
+          }
+        });
+      } else {
+        // Linux 환경 (Ubuntu/Termux): x-terminal-emulator 또는 기타 데스크톱 터미널 실행
+        const cmd = `x-terminal-emulator -e "bash -c \\"npm --prefix \\\\"${orchPath}\\\\" run orch -- --target-name \\\\"${targetName}\\\\" --timeout-ms ${timeout}; exec bash\\""`;
+        exec(cmd, (error) => {
+          if (error) {
+            console.error('Error executing x-terminal-emulator:', error);
+            resolve({ success: false, message: '리눅스 터미널 실행 실패: ' + error.message });
           } else {
             resolve({ success: true });
           }

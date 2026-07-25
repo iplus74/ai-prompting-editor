@@ -19,6 +19,12 @@ AI 프롬프트 작성 및 관리에 최적화된 마크다운(Markdown) 에디�
    ```bash
    npm start
    ```
+   > **팁 (Linux / 안드로이드 Termux + Ubuntu 환경):**
+   > 컨테이너나 PRoot 환경에서는 샌드박스 관련 에러가 발생할 수 있습니다. 리눅스 환경에서는 `--no-sandbox` 플래그를 추가하여 실행해 주세요:
+   > ```bash
+   > npm start -- --no-sandbox
+   > ```
+   > *(참고: GUI 화면 출력을 위해 X11 또는 VNC와 같은 디스플레이 서버 설정과 Chrome 구동을 위한 리눅스 시스템 패키지 설치가 필요합니다.)*
 
 ## 빌드(패키징) 방법
 
@@ -41,12 +47,22 @@ npm install electron-builder --save-dev
   ```bash
   npm run build:win
   ```
+- **Linux용 빌드 (.AppImage):**
+  ```bash
+  npm run build:linux
+  ```
 - **현재 OS 환경에 맞는 기본 빌드:**
   ```bash
   npm run build
   ```
 
 빌드가 완료되면 프로젝트 내에 `dist` 폴더가 생성되며, 해당 폴더 안에서 설치 파일 또는 실행 파일을 확인할 수 있습니다.
+
+> **팁 (Linux 빌드 결과물 실행 시):**
+> 리눅스 빌드 결과물인 `.AppImage` 파일을 실행할 때에도, Termux + Ubuntu와 같은 환경에서는 샌드박스 비활성화가 필요합니다. 빌드된 파일이 위치한 경로에서 다음과 같이 실행해 주세요:
+> ```bash
+> ./dist/"Markdown Editor for AI Prompting-1.0.0.AppImage" --appimage-extract-and-run --no-sandbox
+> ```
 
 ## 라이선스
 ISC
