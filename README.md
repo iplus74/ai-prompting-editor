@@ -61,7 +61,7 @@ npm install electron-builder --save-dev
 > **팁 (Linux 빌드 결과물 실행 시):**
 > 리눅스 빌드 결과물인 `.AppImage` 파일을 실행할 때에도, Termux + Ubuntu와 같은 환경에서는 샌드박스 비활성화가 필요합니다. 빌드된 파일이 위치한 경로에서 다음과 같이 실행해 주세요:
 > ```bash
-> ./dist/"Markdown Editor for AI Prompting-1.0.0.AppImage" --appimage-extract-and-run --no-sandbox
+> ./dist/"Markdown Editor for AI Prompting-1.0.0-arm64.AppImage" --appimage-extract-and-run --no-sandbox
 > ```
 
 ## 라이선스
