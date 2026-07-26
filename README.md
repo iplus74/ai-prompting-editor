@@ -36,7 +36,12 @@ AI 프롬프트 작성 및 관리에 최적화된 마크다운(Markdown) 에디�
 npm install electron-builder --save-dev
 ```
 
-### 2. 패키징 실행
+### 2. 개발모드 실행
+```bash
+npm start -- --appimage-extract-and-run --no-sandbox
+```
+
+### 3. 패키징 실행
 설치가 완료되면 다음 명령어를 사용하여 앱을 빌드합니다:
 
 - **Mac용 빌드 (.dmg):**

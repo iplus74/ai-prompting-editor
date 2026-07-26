@@ -300,7 +300,7 @@ ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeout
         });
       } else {
         // Linux 환경 (Ubuntu/Termux): x-terminal-emulator 또는 기타 데스크톱 터미널 실행
-        const cmd = `x-terminal-emulator -e "bash -c \\"npm --prefix \\\\"${orchPath}\\\\" run orch -- --target-name \\\\"${targetName}\\\\" --timeout-ms ${timeout}; exec bash\\""`;
+        const cmd = `x-terminal-emulator -e bash -c "npm --prefix \\"${orchPath}\\" run orch -- --target-name \\"${targetName}\\" --timeout-ms ${timeout}; exec bash"`;
         exec(cmd, (error) => {
           if (error) {
             console.error('Error executing x-terminal-emulator:', error);
