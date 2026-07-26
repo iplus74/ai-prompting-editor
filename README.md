@@ -64,5 +64,10 @@ npm install electron-builder --save-dev
 > ./dist/"Markdown Editor for AI Prompting-1.0.0-arm64.AppImage" --appimage-extract-and-run --no-sandbox
 > ```
 
+> Termux:X11 + Termux + Ubuntu 환경에서 앱 자동 실행 스크립트
+> ```bash
+> ./run-editor.sh
+> ```
+
 ## 라이선스
 ISC
