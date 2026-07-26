@@ -678,9 +678,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (requirements.length === 0) {
         addRequirement('', '');
       } else {
-        renderAttachments();
         renderRequirements();
       }
+      renderAttachments();
       isSaved = true;
       checkJobRequestEnable();
     });
