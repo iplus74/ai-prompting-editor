@@ -122,7 +122,7 @@ app.on('window-all-closed', function () {
 });
 
 // IPC Handler for saving markdown
-ipcMain.handle('save-markdown', async (event, { filePath, content, categoryPath, mappingFilePath, images }) => {
+ipcMain.handle('save-markdown', async (event, { filePath, content, categoryPath, mappingFilePath, files }) => {
   try {
     // If user didn't specify a full path, prompt them to save
     if (!filePath || filePath.trim() === '') {
@@ -167,8 +167,8 @@ ipcMain.handle('save-markdown', async (event, { filePath, content, categoryPath,
                 relativePath = './' + relativePath;
               }
               current[cate]['prompt'] = [relativePath];
-              if (images && images.length > 0) {
-                current[cate]['images'] = images;
+              if (files && files.length > 0) {
+                current[cate]['files'] = files;
               }
             } else {
               current = current[cate];

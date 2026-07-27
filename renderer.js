@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     attachments = attachments.filter(a => a.id !== id);
     // Also remove from any requirements
     requirements.forEach(req => {
-      req.attachedImages = req.attachedImages.filter(img => img.id !== id);
+      req.attachedFiles = req.attachedFiles.filter(file => file.id !== id);
     });
     renderAttachments();
     renderRequirements(); // Re-render requirements to update toolbars
@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function addRequirement(title, content) {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
-    requirements.push({ id, title, content, attachedImages: [] });
+    requirements.push({ id, title, content, attachedFiles: [] });
     renderRequirements();
     return id;
   }
@@ -389,9 +389,9 @@ document.addEventListener('DOMContentLoaded', () => {
           btn.textContent = filename;
           btn.title = att.alt || '';
           btn.onclick = () => {
-            // Append to req.attachedImages instead of inserting text
-            if (!req.attachedImages.some(img => img.id === att.id)) {
-                req.attachedImages.push(att);
+            // Append to req.attachedFiles instead of inserting text
+            if (!req.attachedFiles.some(file => file.id === att.id)) {
+                req.attachedFiles.push(att);
                 renderRequirements();
             }
           };
@@ -403,25 +403,25 @@ document.addEventListener('DOMContentLoaded', () => {
       bodyEl.appendChild(toolbarEl);
 
       // Display selected attachments for this requirement below the textarea
-      if (req.attachedImages && req.attachedImages.length > 0) {
-        const selectedImgsEl = document.createElement('div');
-        selectedImgsEl.style.marginTop = '0.75rem';
-        selectedImgsEl.style.padding = '0.75rem';
-        selectedImgsEl.style.background = '#f1f5f9';
-        selectedImgsEl.style.borderRadius = '8px';
-        selectedImgsEl.style.border = '1px solid #e2e8f0';
+      if (req.attachedFiles && req.attachedFiles.length > 0) {
+        const selectedFilesEl = document.createElement('div');
+        selectedFilesEl.style.marginTop = '0.75rem';
+        selectedFilesEl.style.padding = '0.75rem';
+        selectedFilesEl.style.background = '#f1f5f9';
+        selectedFilesEl.style.borderRadius = '8px';
+        selectedFilesEl.style.border = '1px solid #e2e8f0';
         
         const selTitle = document.createElement('div');
-        selTitle.textContent = '요구사항 첨부 이미지:';
+        selTitle.textContent = '요구사항 첨부 파일:';
         selTitle.style.fontSize = '0.85rem';
         selTitle.style.fontWeight = '500';
         selTitle.style.color = '#475569';
         selTitle.style.marginBottom = '0.5rem';
-        selectedImgsEl.appendChild(selTitle);
+        selectedFilesEl.appendChild(selTitle);
         
-        req.attachedImages.forEach((img, idx) => {
+        req.attachedFiles.forEach((file, idx) => {
            // We reference the original attachment to get the latest alt text
-           const currentAtt = attachments.find(a => a.id === img.id) || img;
+           const currentAtt = attachments.find(a => a.id === file.id) || file;
 
            const row = document.createElement('div');
            row.style.display = 'flex';
@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
            
            const info = document.createElement('span');
            const filename = currentAtt.path.split(/[/\\]/).pop();
-           info.textContent = `- 첨부 이미지 ${idx + 1}: ${filename} (${currentAtt.alt || 'alt 없음'})`;
+           info.textContent = `- 첨부 파일 ${idx + 1}: ${filename} (${currentAtt.alt || 'alt 없음'})`;
            
            const rmBtn = document.createElement('button');
            rmBtn.textContent = '✕';
@@ -442,15 +442,15 @@ document.addEventListener('DOMContentLoaded', () => {
            rmBtn.style.cursor = 'pointer';
            rmBtn.style.padding = '0 0.5rem';
            rmBtn.onclick = () => {
-              req.attachedImages.splice(idx, 1);
+              req.attachedFiles.splice(idx, 1);
               renderRequirements();
            };
            
            row.appendChild(info);
            row.appendChild(rmBtn);
-           selectedImgsEl.appendChild(row);
+           selectedFilesEl.appendChild(row);
         });
-        bodyEl.appendChild(selectedImgsEl);
+        bodyEl.appendChild(selectedFilesEl);
       }
       
       itemEl.appendChild(headerEl);
@@ -506,12 +506,12 @@ document.addEventListener('DOMContentLoaded', () => {
         md += `${req.content}\n`;
       }
 
-      // Append attached images to the end of the requirement block
-      if (req.attachedImages && req.attachedImages.length > 0) {
+      // Append attached files to the end of the requirement block
+      if (req.attachedFiles && req.attachedFiles.length > 0) {
         md += `\n`;
-        req.attachedImages.forEach((img, imgIdx) => {
-          const currentAtt = attachments.find(a => a.id === img.id) || img;
-          md += `- 첨부 이미지 ${imgIdx + 1}: \`${currentAtt.alt}\`\n`;
+        req.attachedFiles.forEach((file, fileIdx) => {
+          const currentAtt = attachments.find(a => a.id === file.id) || file;
+          md += `- 첨부 파일 ${fileIdx + 1}: \`${currentAtt.alt}\`\n`;
         });
       }
       md += `\n`;
@@ -552,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const mappingFilePath = localStorage.getItem('mappingFilePath') || '';
 
-    const images = attachments.map(att => ({
+    const files = attachments.map(att => ({
       path: att.path,
       alt: att.alt
     }));
@@ -566,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
         content: mdContent,
         categoryPath,
         mappingFilePath,
-        images
+        files
       });
       if (response.success) {
         showStatus(`${response.message} (${response.filePath})`);
@@ -651,15 +651,15 @@ document.addEventListener('DOMContentLoaded', () => {
            const title = lines[0].trim();
            
            let contentLines = [];
-           let attachedImages = [];
+           let attachedFiles = [];
            
            for (let i = 1; i < lines.length; i++) {
              const line = lines[i];
-             const imgMatch = line.match(/- 첨부 이미지 \d+:\s*(.*)/);
-             if (imgMatch) {
-                const altText = imgMatch[1].replace(/^`|`$/g, '').trim();
+             const fileMatch = line.match(/- 첨부 파일 \d+:\s*(.*)/);
+             if (fileMatch) {
+                const altText = fileMatch[1].replace(/^`|`$/g, '').trim();
                 const att = attachments.find(a => a.alt === altText);
-                if (att) attachedImages.push(att);
+                if (att) attachedFiles.push(att);
              } else {
                 contentLines.push(line);
              }
@@ -671,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
            
            const contentStr = contentLines.join('\n').trim();
            const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
-           requirements.push({ id, title, content: contentStr, attachedImages });
+           requirements.push({ id, title, content: contentStr, attachedFiles });
         });
       }
       
