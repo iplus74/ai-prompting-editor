@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { CopilotClient } = require('@github/copilot-sdk');
 
 function createMenu() {
   const isMac = process.platform === 'darwin';
@@ -119,6 +120,98 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Load .env
+try {
+  process.loadEnvFile(path.resolve('.env'));
+} catch (e) {
+  // ignore
+}
+
+// IPC Handler for generating markdown using Copilot SDK
+ipcMain.handle('generate-markdown-with-ai', async (event, { model, content, filePath, githubToken }) => {
+  try {
+    if (!model) {
+      throw new Error('모델이 선택되지 않았습니다.');
+    }
+    if (!content || content.trim() === '') {
+      throw new Error('개발 내용이 비어 있습니다.');
+    }
+
+    const targetAbs = filePath ? path.dirname(filePath) : process.cwd();
+    const clientOptions = { workingDirectory: targetAbs };
+
+    const token = githubToken || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    if (token) {
+      clientOptions.gitHubToken = token;
+    }
+
+    const client = new CopilotClient(clientOptions);
+    await client.start();
+
+    const session = await client.createSession({ model });
+
+    const systemPrompt = `당신은 전문 소프트웨어 엔지니어이자 기획자입니다.
+사용자가 입력한 아래 개발 내용을 분석하여, 규칙에 맞는 "작업 요청서" 마크다운 문서를 생성해 주세요.
+
+사용자 입력 내용:
+"""
+${content}
+"""
+
+반드시 아래 포맷 규칙을 준수하여 마크다운 문서 내용만 반환해 주세요. 추가 설명이나 코드 블록 기호(\`\`\`markdown 등)를 포함하지 말고 마크다운 텍스트 원본만 반환해야 합니다.
+
+[포맷 규칙]
+---
+title: [개발 내용의 핵심 요약 제목]
+category: [카테고리 경로가 유추된다면 명시, 예: auth.login. UI 화면이나 디렉토리 구조에서 유추 불가능하면 그냥 생략하거나 빈값]
+attachments:
+  - path: [개발 내용 분석 시, 수정/참조 대상이 될 법한 소스코드 파일의 전체 경로를 유추하여 입력해 주세요. 예: /Users/yangsukim/data/work/house_sara/ai-prompting-editor/renderer.js. 반드시 절대 경로 형식으로 유추해서 입력하고, alt 정보도 꼭 넣으세요. 만약 유추 불가능하다면 attachments를 비워두세요.]
+    alt: [첨부파일 설명, 예: renderer.js 소스코드]
+---
+
+# 작업 요청서
+## 1. 개요
+[분석된 개발 내용의 전반적인 개요 및 배경]
+
+## 2. 역할
+[AI가 수행해야 할 상세 역할 기술]
+
+## 3. 요구사항
+### 3.1 [요구사항 세부 제목 1]
+[요구사항 상세 내용 1]
+
+### 3.2 [요구사항 세부 제목 2]
+[요구사항 상세 내용 2]
+
+## 4. 최종 결과물
+아래 항목을 반드시 모두 포함해 주세요.
+- **변경/생성한 파일 목록** (경로 포함)
+- 컴파일/테스트 수행 여부 및 결과
+- **요약문만 출력하지 마세요. 필수 항목 누락은 실패로 간주됩니다.**
+`;
+
+    const messageOptions = {
+      prompt: systemPrompt,
+      mode: 'immediate',
+    };
+
+    const finalEvent = await session.sendAndWait(messageOptions, 300000);
+    let output = finalEvent?.data?.content || '';
+
+    await session.disconnect();
+
+    output = output.replace(/^```markdown\n/, '');
+    output = output.replace(/^```\n/, '');
+    output = output.replace(/\n```$/, '');
+    output = output.trim();
+
+    return { success: true, content: output };
+  } catch (error) {
+    console.error('AI Generation error:', error);
+    return { success: false, message: error.message };
+  }
 });
 
 // IPC Handler for saving markdown

@@ -32,5 +32,8 @@
   "devDependencies": {
     "electron": "^42.3.3",
     "electron-builder": "^26.15.0"
+  },
+  "dependencies": {
+    "@github/copilot-sdk": "^1.0.11"
   }
 }

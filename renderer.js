@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveSettingsBtn = document.getElementById('save-settings-btn');
   const mappingFilePathInput = document.getElementById('mapping-file-path');
   const taskTargetListInput = document.getElementById('task-target-list');
+  const aiModelsListInput = document.getElementById('ai-models-list');
+  const githubTokenInput = document.getElementById('github-token');
   const orchPathInput = document.getElementById('orch-path');
   const taskTargetSelect = document.getElementById('task-target');
   const jobRequestBtn = document.getElementById('job-request-btn');
@@ -27,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
   settingsBtn.addEventListener('click', () => {
     mappingFilePathInput.value = localStorage.getItem('mappingFilePath') || '';
     taskTargetListInput.value = localStorage.getItem('taskTargetList') || '';
+    aiModelsListInput.value = localStorage.getItem('aiModelsList') || '';
+    githubTokenInput.value = localStorage.getItem('githubToken') || '';
     orchPathInput.value = localStorage.getItem('orchPath') || '';
     settingsModal.style.display = 'flex';
   });
@@ -38,11 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
   saveSettingsBtn.addEventListener('click', () => {
     localStorage.setItem('mappingFilePath', mappingFilePathInput.value.trim());
     localStorage.setItem('taskTargetList', taskTargetListInput.value.trim());
+    localStorage.setItem('aiModelsList', aiModelsListInput.value.trim());
+    localStorage.setItem('githubToken', githubTokenInput.value.trim());
     localStorage.setItem('orchPath', orchPathInput.value.trim());
     settingsModal.style.display = 'none';
     showStatus('환경설정이 저장되었습니다.');
     updateTaskTargetSelect();
     checkJobRequestEnable();
+    updateAiModelSelect();
   });
 
   mappingFilePathInput.addEventListener('click', async (e) => {
@@ -602,87 +609,90 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function loadMarkdownToEditor(filePath, content) {
+    document.getElementById('file-path').value = filePath;
+    
+    // Clear current
+    document.getElementById('doc-title').value = '';
+    document.getElementById('doc-overview').value = '';
+    document.getElementById('doc-role').value = '';
+    document.getElementById('category-path').value = '';
+    attachments = [];
+    requirements = [];
+
+    // 1. Frontmatter
+    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+    if (frontmatterMatch) {
+      const fm = frontmatterMatch[1];
+      const titleMatch = fm.match(/title:\s*(.*)/);
+      if (titleMatch) document.getElementById('doc-title').value = titleMatch[1].trim();
+
+      const categoryMatch = fm.match(/category:\s*(.*)/);
+      if (categoryMatch) {
+        document.getElementById('category-path').value = categoryMatch[1].trim();
+      }
+      
+      const attRegex = /-\s*path:\s*(.*)\n\s*alt:\s*(.*)/g;
+      let match;
+      while ((match = attRegex.exec(fm)) !== null) {
+        const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+        attachments.push({ id, path: match[1].trim(), alt: match[2].trim() });
+      }
+    }
+    
+    // 2. Sections
+    const overviewMatch = content.match(/## 1\. 개요\n([\s\S]*?)(?=\n## 2\. 역할)/);
+    if (overviewMatch) document.getElementById('doc-overview').value = overviewMatch[1].trim();
+    
+    const roleMatch = content.match(/## 2\. 역할\n([\s\S]*?)(?=\n## 3\. 요구사항)/);
+    if (roleMatch) document.getElementById('doc-role').value = roleMatch[1].trim();
+    
+    const reqSectionMatch = content.match(/## 3\. 요구사항\n([\s\S]*?)(?=\n## 4\. 최종 결과물)/);
+    if (reqSectionMatch) {
+      const reqText = reqSectionMatch[1];
+      const reqs = reqText.split(/### 3\.\d+\s+/).filter(Boolean);
+      reqs.forEach(reqBlock => {
+         const lines = reqBlock.split('\n');
+         const title = lines[0].trim();
+         
+         let contentLines = [];
+         let attachedFiles = [];
+         
+         for (let i = 1; i < lines.length; i++) {
+           const line = lines[i];
+           const fileMatch = line.match(/- 첨부 파일 \d+:\s*(.*)/);
+           if (fileMatch) {
+              const altText = fileMatch[1].replace(/^`|`$/g, '').trim();
+              const att = attachments.find(a => a.alt === altText);
+              if (att) attachedFiles.push(att);
+           } else {
+              contentLines.push(line);
+           }
+         }
+         
+         while (contentLines.length > 0 && contentLines[contentLines.length - 1].trim() === '') {
+           contentLines.pop();
+         }
+         
+         const contentStr = contentLines.join('\n').trim();
+         const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+         requirements.push({ id, title, content: contentStr, attachedFiles });
+      });
+    }
+    
+    if (requirements.length === 0) {
+      addRequirement('', '');
+    } else {
+      renderRequirements();
+    }
+    renderAttachments();
+    isSaved = true;
+    checkJobRequestEnable();
+  }
+
   if (window.api && window.api.onFileOpen) {
     window.api.onFileOpen((data) => {
-      const { filePath, content } = data;
-      document.getElementById('file-path').value = filePath;
-      
-      // Clear current
-      document.getElementById('doc-title').value = '';
-      document.getElementById('doc-overview').value = '';
-      document.getElementById('doc-role').value = '';
-      document.getElementById('category-path').value = '';
-      attachments = [];
-      requirements = [];
-
-      // 1. Frontmatter
-      const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-      if (frontmatterMatch) {
-        const fm = frontmatterMatch[1];
-        const titleMatch = fm.match(/title:\s*(.*)/);
-        if (titleMatch) document.getElementById('doc-title').value = titleMatch[1].trim();
-
-        const categoryMatch = fm.match(/category:\s*(.*)/);
-        if (categoryMatch) {
-          document.getElementById('category-path').value = categoryMatch[1].trim();
-        }
-        
-        const attRegex = /-\s*path:\s*(.*)\n\s*alt:\s*(.*)/g;
-        let match;
-        while ((match = attRegex.exec(fm)) !== null) {
-          const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
-          attachments.push({ id, path: match[1].trim(), alt: match[2].trim() });
-        }
-      }
-      
-      // 2. Sections
-      const overviewMatch = content.match(/## 1\. 개요\n([\s\S]*?)(?=\n## 2\. 역할)/);
-      if (overviewMatch) document.getElementById('doc-overview').value = overviewMatch[1].trim();
-      
-      const roleMatch = content.match(/## 2\. 역할\n([\s\S]*?)(?=\n## 3\. 요구사항)/);
-      if (roleMatch) document.getElementById('doc-role').value = roleMatch[1].trim();
-      
-      const reqSectionMatch = content.match(/## 3\. 요구사항\n([\s\S]*?)(?=\n## 4\. 최종 결과물)/);
-      if (reqSectionMatch) {
-        const reqText = reqSectionMatch[1];
-        const reqs = reqText.split(/### 3\.\d+\s+/).filter(Boolean);
-        reqs.forEach(reqBlock => {
-           const lines = reqBlock.split('\n');
-           const title = lines[0].trim();
-           
-           let contentLines = [];
-           let attachedFiles = [];
-           
-           for (let i = 1; i < lines.length; i++) {
-             const line = lines[i];
-             const fileMatch = line.match(/- 첨부 파일 \d+:\s*(.*)/);
-             if (fileMatch) {
-                const altText = fileMatch[1].replace(/^`|`$/g, '').trim();
-                const att = attachments.find(a => a.alt === altText);
-                if (att) attachedFiles.push(att);
-             } else {
-                contentLines.push(line);
-             }
-           }
-           
-           while (contentLines.length > 0 && contentLines[contentLines.length - 1].trim() === '') {
-             contentLines.pop();
-           }
-           
-           const contentStr = contentLines.join('\n').trim();
-           const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
-           requirements.push({ id, title, content: contentStr, attachedFiles });
-        });
-      }
-      
-      if (requirements.length === 0) {
-        addRequirement('', '');
-      } else {
-        renderRequirements();
-      }
-      renderAttachments();
-      isSaved = true;
-      checkJobRequestEnable();
+      loadMarkdownToEditor(data.filePath, data.content);
     });
   }
 
@@ -690,8 +700,150 @@ document.addEventListener('DOMContentLoaded', () => {
     window.api.onOpenSettings(() => {
       mappingFilePathInput.value = localStorage.getItem('mappingFilePath') || '';
       taskTargetListInput.value = localStorage.getItem('taskTargetList') || '';
+      aiModelsListInput.value = localStorage.getItem('aiModelsList') || '';
+      githubTokenInput.value = localStorage.getItem('githubToken') || '';
       orchPathInput.value = localStorage.getItem('orchPath') || '';
       settingsModal.style.display = 'flex';
     });
   }
+
+  // AI Generator Logic
+  const aiGeneratorModal = document.getElementById('ai-generator-modal');
+  const closeAiGenBtn = document.getElementById('close-ai-gen-btn');
+  const runAiGenBtn = document.getElementById('run-ai-gen-btn');
+  const aiGenInputContent = document.getElementById('ai-gen-input-content');
+  const aiGenModelSelect = document.getElementById('ai-gen-model-select');
+  const aiGenFilePath = document.getElementById('ai-gen-file-path');
+
+  // AI Gen File Path click logic
+  aiGenFilePath.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      const response = await window.api.selectSavePath();
+      if (response && response.success) {
+        aiGenFilePath.value = response.filePath;
+        // Sync to main editor's file path input as well
+        document.getElementById('file-path').value = response.filePath;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  function updateAiModelSelect() {
+    const modelsStr = localStorage.getItem('aiModelsList') || '';
+    const models = modelsStr.split(',').map(s => s.trim()).filter(Boolean);
+    const currentValue = aiGenModelSelect.value;
+    aiGenModelSelect.innerHTML = '';
+    
+    if (models.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- 모델 없음 (설정 필요) --';
+      aiGenModelSelect.appendChild(opt);
+    } else {
+      models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        aiGenModelSelect.appendChild(opt);
+      });
+      if (models.includes(currentValue)) {
+        aiGenModelSelect.value = currentValue;
+      } else {
+        aiGenModelSelect.value = models[0];
+      }
+    }
+  }
+
+  // Initialize AI model list
+  updateAiModelSelect();
+
+  function openAiGeneratorModal() {
+    // Sync file path from main window
+    aiGenFilePath.value = document.getElementById('file-path').value.trim();
+    aiGenInputContent.value = '';
+    updateAiModelSelect();
+    aiGeneratorModal.style.display = 'flex';
+    aiGenInputContent.focus();
+  }
+
+  function closeAiGeneratorModal() {
+    aiGeneratorModal.style.display = 'none';
+  }
+
+  closeAiGenBtn.addEventListener('click', closeAiGeneratorModal);
+
+  runAiGenBtn.addEventListener('click', async () => {
+    const model = aiGenModelSelect.value;
+    const content = aiGenInputContent.value.trim();
+    let filePath = aiGenFilePath.value.trim();
+
+    if (!model) {
+      alert('설정에서 요청서 생성 모델 목록을 등록한 뒤 모델을 선택해 주세요.');
+      return;
+    }
+    if (!content) {
+      alert('개발 내용을 입력해 주세요.');
+      return;
+    }
+    
+    if (!filePath) {
+      alert('저장 파일 경로를 지정해 주세요. 저장 파일 경로 입력란을 클릭하여 경로를 지정할 수 있습니다.');
+      return;
+    }
+
+    runAiGenBtn.disabled = true;
+    runAiGenBtn.style.opacity = '0.7';
+    runAiGenBtn.textContent = '생성 중...';
+
+    try {
+      // 1. AI 마크다운 생성 요청
+      const githubToken = localStorage.getItem('githubToken') || '';
+      const aiResponse = await window.api.generateMarkdownWithAi({ model, content, filePath, githubToken });
+      if (!aiResponse || !aiResponse.success) {
+        throw new Error(aiResponse ? aiResponse.message : 'AI 생성 실패');
+      }
+
+      const generatedContent = aiResponse.content;
+
+      // 2. 파일 저장 실행
+      const saveResponse = await window.api.saveMarkdown({
+        filePath,
+        content: generatedContent,
+        categoryPath: '', // AI 생성 시에는 우선 빈값으로 저장 후 수동 편집 가능
+        mappingFilePath: localStorage.getItem('mappingFilePath') || '',
+        files: [] // 첨부파일 매핑도 일단 빈 값
+      });
+
+      if (saveResponse && saveResponse.success) {
+        showStatus('요청서가 자동으로 생성 및 저장되었습니다.');
+        // 3. 저장된 내용을 편집기 화면에 불러오기
+        loadMarkdownToEditor(saveResponse.filePath, generatedContent);
+        closeAiGeneratorModal();
+      } else {
+        throw new Error(saveResponse ? saveResponse.message : '파일 저장 실패');
+      }
+
+    } catch (err) {
+      alert(`에러가 발생했습니다: ${err.message}`);
+      console.error(err);
+    } finally {
+      runAiGenBtn.disabled = false;
+      runAiGenBtn.style.opacity = '1';
+      runAiGenBtn.textContent = '자동 생성';
+    }
+  });
+
+  // Shortcut key handling (Cmd+M on Mac, Ctrl+M on Windows/Linux)
+  window.addEventListener('keydown', (e) => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const isCmdM = (isMac && e.metaKey && e.key.toLowerCase() === 'm') || (!isMac && e.ctrlKey && e.key.toLowerCase() === 'm');
+    const isCtrlN = (!isMac && e.ctrlKey && e.key.toLowerCase() === 'n');
+
+    if (isCmdM || isCtrlN) {
+      e.preventDefault();
+      openAiGeneratorModal();
+    }
+  });
 });
