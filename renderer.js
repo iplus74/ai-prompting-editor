@@ -518,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
         md += `\n`;
         req.attachedFiles.forEach((file, fileIdx) => {
           const currentAtt = attachments.find(a => a.id === file.id) || file;
-          md += `- 첨부 파일 ${fileIdx + 1}: \`${currentAtt.alt}\`\n`;
+          md += `- 첨부 파일 ${fileIdx + 1}: \`${currentAtt.alt}\` (path: ${currentAtt.path})\n`;
         });
       }
       md += `\n`;
@@ -662,8 +662,12 @@ document.addEventListener('DOMContentLoaded', () => {
            const line = lines[i];
            const fileMatch = line.match(/- 첨부 파일 \d+:\s*(.*)/);
            if (fileMatch) {
-              const altText = fileMatch[1].replace(/^`|`$/g, '').trim();
-              const att = attachments.find(a => a.alt === altText);
+            const attachmentText = fileMatch[1].trim();
+            const pathMatch = attachmentText.match(/\(path:\s*([^)]*)\)\s*$/);
+            const altText = attachmentText.replace(/\(path:\s*[^)]*\)\s*$/, '').replace(/^`|`$/g, '').trim();
+            const attachmentPath = pathMatch ? pathMatch[1].trim() : '';
+            const att = attachments.find(a => attachmentPath && a.path === attachmentPath)
+             || attachments.find(a => a.alt === altText);
               if (att) attachedFiles.push(att);
            } else {
               contentLines.push(line);
@@ -880,10 +884,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Shortcut key handling (Cmd+M on Mac, Ctrl+M on Windows/Linux)
   window.addEventListener('keydown', (e) => {
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const isCmdM = (isMac && e.metaKey && e.key.toLowerCase() === 'm') || (!isMac && e.ctrlKey && e.key.toLowerCase() === 'm');
-    const isCtrlN = (!isMac && e.ctrlKey && e.key.toLowerCase() === 'n');
+    const isCmdM = (isMac && e.metaKey && e.code === 'KeyM') || (!isMac && e.ctrlKey && e.code === 'KeyM');
 
-    if (isCmdM || isCtrlN) {
+    if (isCmdM) {
       e.preventDefault();
       openAiGeneratorModal();
     }

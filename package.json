@@ -1,7 +1,7 @@
 {
   "name": "ai-prompt-editor",
   "version": "1.0.0",
-  "description": "",
+  "description": "Electron desktop editor for creating and managing AI prompting markdown documents with GitHub Copilot SDK integration.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
