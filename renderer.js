@@ -715,6 +715,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const aiGenModelSelect = document.getElementById('ai-gen-model-select');
   const aiGenFilePath = document.getElementById('ai-gen-file-path');
 
+  let activeGenerationId = null;
+
   // AI Gen File Path click logic
   aiGenFilePath.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -760,15 +762,37 @@ document.addEventListener('DOMContentLoaded', () => {
   updateAiModelSelect();
 
   function openAiGeneratorModal() {
+    activeGenerationId = null;
     // Sync file path from main window
     aiGenFilePath.value = document.getElementById('file-path').value.trim();
     aiGenInputContent.value = '';
+    
+    // Reset button state
+    runAiGenBtn.disabled = false;
+    runAiGenBtn.style.opacity = '1';
+    runAiGenBtn.textContent = '자동 생성';
+    
     updateAiModelSelect();
     aiGeneratorModal.style.display = 'flex';
     aiGenInputContent.focus();
   }
 
-  function closeAiGeneratorModal() {
+  async function closeAiGeneratorModal() {
+    if (activeGenerationId) {
+      const gId = activeGenerationId;
+      activeGenerationId = null;
+      try {
+        await window.api.cancelMarkdownGeneration({ generationId: gId });
+      } catch (err) {
+        console.error('Cancel failed:', err);
+      }
+    }
+    
+    // Reset button state upon close
+    runAiGenBtn.disabled = false;
+    runAiGenBtn.style.opacity = '1';
+    runAiGenBtn.textContent = '자동 생성';
+    
     aiGeneratorModal.style.display = 'none';
   }
 
@@ -793,6 +817,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const generationId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+    activeGenerationId = generationId;
+
     runAiGenBtn.disabled = true;
     runAiGenBtn.style.opacity = '0.7';
     runAiGenBtn.textContent = '생성 중...';
@@ -800,7 +827,12 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       // 1. AI 마크다운 생성 요청
       const githubToken = localStorage.getItem('githubToken') || '';
-      const aiResponse = await window.api.generateMarkdownWithAi({ model, content, filePath, githubToken });
+      const aiResponse = await window.api.generateMarkdownWithAi({ model, content, filePath, githubToken, generationId });
+      
+      if (activeGenerationId !== generationId) {
+        return;
+      }
+
       if (!aiResponse || !aiResponse.success) {
         throw new Error(aiResponse ? aiResponse.message : 'AI 생성 실패');
       }
@@ -816,22 +848,32 @@ document.addEventListener('DOMContentLoaded', () => {
         files: [] // 첨부파일 매핑도 일단 빈 값
       });
 
+      if (activeGenerationId !== generationId) {
+        return;
+      }
+
       if (saveResponse && saveResponse.success) {
         showStatus('요청서가 자동으로 생성 및 저장되었습니다.');
         // 3. 저장된 내용을 편집기 화면에 불러오기
         loadMarkdownToEditor(saveResponse.filePath, generatedContent);
+        activeGenerationId = null;
         closeAiGeneratorModal();
       } else {
         throw new Error(saveResponse ? saveResponse.message : '파일 저장 실패');
       }
 
     } catch (err) {
-      alert(`에러가 발생했습니다: ${err.message}`);
-      console.error(err);
+      if (activeGenerationId === generationId) {
+        alert(`에러가 발생했습니다: ${err.message}`);
+        console.error(err);
+      }
     } finally {
-      runAiGenBtn.disabled = false;
-      runAiGenBtn.style.opacity = '1';
-      runAiGenBtn.textContent = '자동 생성';
+      if (activeGenerationId === generationId) {
+        activeGenerationId = null;
+        runAiGenBtn.disabled = false;
+        runAiGenBtn.style.opacity = '1';
+        runAiGenBtn.textContent = '자동 생성';
+      }
     }
   });
 

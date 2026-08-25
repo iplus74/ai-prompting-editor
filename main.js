@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { CopilotClient } = require('@github/copilot-sdk');
+const { CopilotClient, RuntimeConnection } = require('@github/copilot-sdk');
 
 function createMenu() {
   const isMac = process.platform === 'darwin';
@@ -129,8 +129,47 @@ try {
   // ignore
 }
 
+const activeAiGenerations = new Map();
+
+function getCopilotBinaryPath() {
+  const arch = process.arch;
+  const platform = process.platform;
+  const packageName = `@github/copilot-${platform}-${arch}`;
+
+  try {
+    let binaryPath = require.resolve(packageName);
+    if (binaryPath.includes('app.asar') && !binaryPath.includes('app.asar.unpacked')) {
+      binaryPath = binaryPath.replace('app.asar', 'app.asar.unpacked');
+    }
+    if (fs.existsSync(binaryPath)) {
+      return binaryPath;
+    }
+  } catch (err) {
+    console.error(`Failed to resolve package ${packageName}:`, err);
+  }
+
+  if (platform === 'linux') {
+    const muslPackageName = `@github/copilot-linuxmusl-${arch}`;
+    try {
+      let binaryPath = require.resolve(muslPackageName);
+      if (binaryPath.includes('app.asar') && !binaryPath.includes('app.asar.unpacked')) {
+        binaryPath = binaryPath.replace('app.asar', 'app.asar.unpacked');
+      }
+      if (fs.existsSync(binaryPath)) {
+        return binaryPath;
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  return null;
+}
+
 // IPC Handler for generating markdown using Copilot SDK
-ipcMain.handle('generate-markdown-with-ai', async (event, { model, content, filePath, githubToken }) => {
+ipcMain.handle('generate-markdown-with-ai', async (event, { model, content, filePath, githubToken, generationId }) => {
+  let client = null;
+  let session = null;
   try {
     if (!model) {
       throw new Error('모델이 선택되지 않았습니다.');
@@ -140,17 +179,32 @@ ipcMain.handle('generate-markdown-with-ai', async (event, { model, content, file
     }
 
     const targetAbs = filePath ? path.dirname(filePath) : process.cwd();
-    const clientOptions = { workingDirectory: targetAbs };
+    const clientOptions = {
+      workingDirectory: targetAbs,
+      env: {
+        ...process.env,
+        ELECTRON_RUN_AS_NODE: '1'
+      }
+    };
+
+    const binaryPath = getCopilotBinaryPath();
+    if (binaryPath) {
+      clientOptions.connection = RuntimeConnection.forStdio({ path: binaryPath });
+    }
 
     const token = githubToken || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (token) {
       clientOptions.gitHubToken = token;
     }
 
-    const client = new CopilotClient(clientOptions);
+    client = new CopilotClient(clientOptions);
+    if (generationId) {
+      activeAiGenerations.set(generationId, client);
+    }
+
     await client.start();
 
-    const session = await client.createSession({ model });
+    session = await client.createSession({ model });
 
     const systemPrompt = `당신은 전문 소프트웨어 엔지니어이자 기획자입니다.
 사용자가 입력한 아래 개발 내용을 분석하여, 규칙에 맞는 "작업 요청서" 마크다운 문서를 생성해 주세요.
@@ -201,6 +255,7 @@ attachments:
     let output = finalEvent?.data?.content || '';
 
     await session.disconnect();
+    session = null;
 
     output = output.replace(/^```markdown\n/, '');
     output = output.replace(/^```\n/, '');
@@ -211,7 +266,42 @@ attachments:
   } catch (error) {
     console.error('AI Generation error:', error);
     return { success: false, message: error.message };
+  } finally {
+    if (generationId) {
+      activeAiGenerations.delete(generationId);
+    }
+    if (session) {
+      try {
+        await session.disconnect();
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (client) {
+      try {
+        await client.stop();
+      } catch (e) {
+        // ignore
+      }
+    }
   }
+});
+
+// IPC Handler for cancelling markdown generation
+ipcMain.handle('cancel-markdown-generation', async (event, { generationId }) => {
+  if (generationId && activeAiGenerations.has(generationId)) {
+    const client = activeAiGenerations.get(generationId);
+    if (client) {
+      try {
+        await client.forceStop();
+      } catch (err) {
+        console.error('Error force stopping client:', err);
+      }
+    }
+    activeAiGenerations.delete(generationId);
+    return { success: true };
+  }
+  return { success: false, message: 'No active generation found with this ID' };
 });
 
 // IPC Handler for saving markdown

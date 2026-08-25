@@ -14,6 +14,10 @@
   "build": {
     "appId": "com.iplus74.ai-prompt-editor",
     "productName": "Markdown Editor for AI Prompting",
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/@github/**/*"
+    ],
     "mac": {
       "target": "dmg",
       "category": "public.app-category.productivity"

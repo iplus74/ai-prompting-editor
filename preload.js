@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   saveMarkdown: (data) => ipcRenderer.invoke('save-markdown', data),
   generateMarkdownWithAi: (data) => ipcRenderer.invoke('generate-markdown-with-ai', data),
+  cancelMarkdownGeneration: (data) => ipcRenderer.invoke('cancel-markdown-generation', data),
   selectAndCopyAttachment: () => ipcRenderer.invoke('select-and-copy-attachment'),
   selectSavePath: () => ipcRenderer.invoke('select-save-path'),
   selectMappingFile: () => ipcRenderer.invoke('select-mapping-file'),
