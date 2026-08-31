@@ -2,7 +2,7 @@
 
 ## 1. 프로젝트 개요
 
-**Markdown Editor for AI Prompting** (`ai-prompt-editor`)은 AI에게 전달할 "작업 요청서" 마크다운 문서를 구조적으로 작성·관리하고, GitHub Copilot SDK를 통해 AI가 자동으로 요청서를 생성하도록 지원하는 **Electron 기반 데스크톱 애플리케이션**입니다.
+**Promptify** (`ai-prompt-editor`)은 AI에게 전달할 "작업 요청서" 마크다운 문서를 구조적으로 작성·관리하고, GitHub Copilot SDK를 통해 AI가 자동으로 요청서를 생성하도록 지원하는 **Electron 기반 데스크톱 애플리케이션**입니다.
 
 ---
 

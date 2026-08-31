@@ -13,19 +13,22 @@
   },
   "build": {
     "appId": "com.iplus74.ai-prompt-editor",
-    "productName": "Markdown Editor for AI Prompting",
+    "productName": "Promptify",
     "asar": true,
     "asarUnpack": [
       "**/node_modules/@github/**/*"
     ],
     "mac": {
+      "icon": "build/icon.icns",
       "target": "dmg",
       "category": "public.app-category.productivity"
     },
     "win": {
+      "icon": "build/icon.png",
       "target": "nsis"
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": "AppImage",
       "category": "Office"
     }

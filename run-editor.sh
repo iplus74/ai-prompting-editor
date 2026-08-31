@@ -13,6 +13,6 @@ am start -n com.termux.x11/com.termux.x11.MainActivity > /dev/null 2>&1
 echo "마크다운 에디터를 실행합니다..."
 export DISPLAY=:0
 cd /root/project/ai-prompting-editor
-./dist/'Markdown Editor for AI Prompting-1.0.0-arm64.AppImage' --appimage-extract-and-run --no-sandbox --disable-gpu
+./dist/'Promptify-1.0.0-arm64.AppImage' --appimage-extract-and-run --no-sandbox --disable-gpu
 #npm start -- --appimage-extract-and-run --no-sandbox
  

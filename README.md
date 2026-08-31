@@ -1,4 +1,4 @@
-# Markdown Editor for AI Prompting (ai-prompt-editor)
+# Promptify (ai-prompt-editor)
 
 AI 프롬프트 작성 및 관리에 최적화된 마크다운(Markdown) 에디터입니다. 이 애플리케이션은 Electron을 기반으로 구축되었습니다.
 
@@ -66,7 +66,7 @@ npm start -- --appimage-extract-and-run --no-sandbox
 > **팁 (Linux 빌드 결과물 실행 시):**
 > 리눅스 빌드 결과물인 `.AppImage` 파일을 실행할 때에도, Termux + Ubuntu와 같은 환경에서는 샌드박스 비활성화가 필요합니다. 빌드된 파일이 위치한 경로에서 다음과 같이 실행해 주세요:
 > ```bash
-> ./dist/"Markdown Editor for AI Prompting-1.0.0-arm64.AppImage" --appimage-extract-and-run --no-sandbox
+> ./dist/"Promptify-1.0.0-arm64.AppImage" --appimage-extract-and-run --no-sandbox
 > ```
 
 > Termux:X11 + Termux + Ubuntu 환경에서 앱 자동 실행 스크립트
