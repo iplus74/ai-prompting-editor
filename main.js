@@ -199,6 +199,10 @@ ipcMain.handle('generate-markdown-with-ai', async (event, { model, content, file
     const token = githubToken || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (token) {
       clientOptions.gitHubToken = token;
+    } else {
+      // 토큰이 없는 경우 GitHub CLI의 기존 로그인 상태를 사용
+      // (useLoggedInUser가 없으면 --no-auto-login 플래그가 붙어 인증 실패)
+      clientOptions.useLoggedInUser = true;
     }
 
     client = new CopilotClient(clientOptions);
@@ -459,8 +463,12 @@ ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeout
       const isMac = process.platform === 'darwin';
       
       if (isWin) {
-        // Windows 환경: cmd 창을 열고 명령어 실행 후 유지(/K)
-        const cmd = `start cmd.exe /K "npm --prefix \\"${orchPath}\\" run orch -- --target-name \\"${targetName}\\" --timeout-ms ${timeout}"`;
+        // Windows 환경: 임시 .bat 파일을 생성 후 실행 (경로 따옴표 중첩 문제 완전 해결)
+        const os = require('os');
+        const batContent = `@echo off\r\ncd /d "${orchPath}"\r\nnpm run orch -- --target-name "${targetName}" --timeout-ms ${timeout}\r\npause\r\n`;
+        const batPath = path.join(os.tmpdir(), `run-orch-${Date.now()}.bat`);
+        fs.writeFileSync(batPath, batContent, 'utf8');
+        const cmd = `start cmd.exe /K "${batPath}"`;
         exec(cmd, (error) => {
           if (error) {
             console.error('Error executing cmd:', error);
