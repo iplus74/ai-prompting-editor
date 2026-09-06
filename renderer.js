@@ -647,10 +647,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const roleMatch = content.match(/## 2\. 역할\n([\s\S]*?)(?=\n## 3\. 요구사항)/);
     if (roleMatch) document.getElementById('doc-role').value = roleMatch[1].trim();
     
-    const reqSectionMatch = content.match(/## 3\. 요구사항\n([\s\S]*?)(?=\n## 4\. 최종 결과물)/);
+    const reqSectionMatch = content.match(/## 3\. 요구사항\s*\n([\s\S]*?)(?=\n## 4\.|window\.|$)/);
     if (reqSectionMatch) {
       const reqText = reqSectionMatch[1];
-      const reqs = reqText.split(/### 3\.\d+\s+/).filter(Boolean);
+      const reqs = reqText.split(/### 3\.\d+\s+/).filter(s => s.trim() !== '');
       reqs.forEach(reqBlock => {
          const lines = reqBlock.split('\n');
          const title = lines[0].trim();
