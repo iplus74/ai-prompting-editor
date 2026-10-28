@@ -142,7 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeoutMs = taskTimeoutInput.value.trim() || '300000';
     
     try {
-      const response = await window.api.runOrchCommand({ orchPath, targetName, timeoutMs });
+      const autoApprove = document.getElementById('auto-approve').checked;
+      const response = await window.api.runOrchCommand({ orchPath, targetName, timeoutMs, autoApprove });
       if (response.success) {
         showStatus('작업 요청 터미널이 실행되었습니다.');
       } else {

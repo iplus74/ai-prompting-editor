@@ -453,9 +453,10 @@ ipcMain.handle('select-orch-dir', async () => {
 });
 
 // IPC Handler for running orch command
-ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeoutMs }) => {
+ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeoutMs, autoApprove }) => {
   try {
     const timeout = timeoutMs || '300000';
+    const autoFlag = autoApprove ? ' --auto' : '';
     
     return new Promise((resolve) => {
       const { exec } = require('child_process');
@@ -465,7 +466,7 @@ ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeout
       if (isWin) {
         // Windows 환경: 임시 .bat 파일을 생성 후 실행 (경로 따옴표 중첩 문제 완전 해결)
         const os = require('os');
-        const batContent = `@echo off\r\ncd /d "${orchPath}"\r\nnpm run orch -- --target-name "${targetName}" --timeout-ms ${timeout}\r\npause\r\n`;
+        const batContent = `@echo off\r\ncd /d "${orchPath}"\r\nnpm run orch -- --target-name "${targetName}" --timeout-ms ${timeout}${autoFlag}\r\npause\r\n`;
         const batPath = path.join(os.tmpdir(), `run-orch-${Date.now()}.bat`);
         fs.writeFileSync(batPath, batContent, 'utf8');
         const cmd = `start cmd.exe /K "${batPath}"`;
@@ -482,7 +483,7 @@ ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeout
         const script = `
           tell application "Terminal"
             activate
-            do script "npm --prefix \\"${orchPath}\\" run orch -- --target-name \\"${targetName}\\" --timeout-ms ${timeout}"
+            do script "npm --prefix \\"${orchPath}\\" run orch -- --target-name \\"${targetName}\\" --timeout-ms ${timeout}${autoFlag}"
           end tell
         `;
         exec(`osascript -e '${script}'`, (error) => {
@@ -495,7 +496,7 @@ ipcMain.handle('run-orch-command', async (event, { orchPath, targetName, timeout
         });
       } else {
         // Linux 환경 (Ubuntu/Termux): x-terminal-emulator 또는 기타 데스크톱 터미널 실행
-        const cmd = `x-terminal-emulator -e bash -c "npm --prefix \\"${orchPath}\\" run orch -- --target-name \\"${targetName}\\" --timeout-ms ${timeout}; exec bash"`;
+        const cmd = `x-terminal-emulator -e bash -c "npm --prefix \\"${orchPath}\\" run orch -- --target-name \\"${targetName}\\" --timeout-ms ${timeout}${autoFlag}; exec bash"`;
         exec(cmd, (error) => {
           if (error) {
             console.error('Error executing x-terminal-emulator:', error);
