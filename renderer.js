@@ -499,6 +499,8 @@ document.addEventListener('DOMContentLoaded', () => {
     md += `---\n\n`;
 
     md += `# 작업 요청서\n`;
+    md += `## 0. 참고 자료\n`;
+    md += `mylocal \`pre-work-references\` 로 조회한 내용을 참고해 주세요.\n\n`;
     md += `## 1. 개요\n`;
     md += `${overview}\n\n`;
 

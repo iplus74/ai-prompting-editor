@@ -130,6 +130,9 @@ attachments:
 ---
 
 # 작업 요청서
+## 0. 참고 자료
+mylocal `pre-work-references` 로 조회한 내용을 참고해 주세요.
+
 ## 1. 개요
 [개요 텍스트]
 
