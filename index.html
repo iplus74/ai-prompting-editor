@@ -77,6 +77,13 @@
     </div>
 
     <div class="form-group">
+      <label for="reference-select">참고자료</label>
+      <select id="reference-select" style="width: 400px;">
+        <!-- Options will be dynamically added -->
+      </select>
+    </div>
+
+    <div class="form-group">
       <label for="task-timeout">작업 timeout</label>
       <div style="display: flex; align-items: center; gap: 0.5rem;">
         <input type="number" id="task-timeout" placeholder="300000" style="width: 150px;">
@@ -104,6 +111,11 @@
       <div class="form-group">
         <label for="task-target-list">작업 대상 목록</label>
         <input type="text" id="task-target-list" placeholder="예: 대상1, 대상2">
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.25rem;">콤마(,)로 구분</div>
+      </div>
+      <div class="form-group">
+        <label for="reference-list">참고자료</label>
+        <input type="text" id="reference-list" placeholder="예: 참고1, 참고2">
         <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.25rem;">콤마(,)로 구분</div>
       </div>
       <div class="form-group">

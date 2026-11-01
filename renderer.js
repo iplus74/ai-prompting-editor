@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveSettingsBtn = document.getElementById('save-settings-btn');
   const mappingFilePathInput = document.getElementById('mapping-file-path');
   const taskTargetListInput = document.getElementById('task-target-list');
+  const referenceListInput = document.getElementById('reference-list');
+  const referenceSelect = document.getElementById('reference-select');
   const aiModelsListInput = document.getElementById('ai-models-list');
   const githubTokenInput = document.getElementById('github-token');
   const orchPathInput = document.getElementById('orch-path');
@@ -29,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   settingsBtn.addEventListener('click', () => {
     mappingFilePathInput.value = localStorage.getItem('mappingFilePath') || '';
     taskTargetListInput.value = localStorage.getItem('taskTargetList') || '';
+    referenceListInput.value = localStorage.getItem('referenceList') || '';
     aiModelsListInput.value = localStorage.getItem('aiModelsList') || '';
     githubTokenInput.value = localStorage.getItem('githubToken') || '';
     orchPathInput.value = localStorage.getItem('orchPath') || '';
@@ -42,12 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
   saveSettingsBtn.addEventListener('click', () => {
     localStorage.setItem('mappingFilePath', mappingFilePathInput.value.trim());
     localStorage.setItem('taskTargetList', taskTargetListInput.value.trim());
+    localStorage.setItem('referenceList', referenceListInput.value.trim());
     localStorage.setItem('aiModelsList', aiModelsListInput.value.trim());
     localStorage.setItem('githubToken', githubTokenInput.value.trim());
     localStorage.setItem('orchPath', orchPathInput.value.trim());
     settingsModal.style.display = 'none';
     showStatus('환경설정이 저장되었습니다.');
     updateTaskTargetSelect();
+    updateReferenceSelect();
     checkJobRequestEnable();
     updateAiModelSelect();
   });
@@ -94,6 +99,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   updateTaskTargetSelect();
+
+  function updateReferenceSelect() {
+    const refs = (localStorage.getItem('referenceList') || '').split(',').map(s => s.trim()).filter(Boolean);
+    const currentValue = referenceSelect.value;
+    referenceSelect.innerHTML = '';
+    refs.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      referenceSelect.appendChild(opt);
+    });
+    if (refs.includes(currentValue)) {
+      referenceSelect.value = currentValue;
+    } else if (refs.length > 0) {
+      referenceSelect.value = refs[0];
+    }
+  }
+  updateReferenceSelect();
 
   function checkJobRequestEnable() {
     const hasCategory = categoryPathInput.value.trim().length > 0;
@@ -499,8 +522,12 @@ document.addEventListener('DOMContentLoaded', () => {
     md += `---\n\n`;
 
     md += `# 작업 요청서\n`;
-    md += `## 0. 참고 자료\n`;
-    md += `mylocal \`pre-work-references\` 로 조회한 내용을 참고해 주세요.\n\n`;
+    
+    if (referenceSelect.value != '') {
+      md += `## 0. 참고 자료\n`;
+      md += `mylocal \`${referenceSelect.value}\` 로 조회한 내용을 참고해 주세요.\n\n`;
+    }
+
     md += `## 1. 개요\n`;
     md += `${overview}\n\n`;
 
@@ -707,6 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.api.onOpenSettings(() => {
       mappingFilePathInput.value = localStorage.getItem('mappingFilePath') || '';
       taskTargetListInput.value = localStorage.getItem('taskTargetList') || '';
+      referenceListInput.value = localStorage.getItem('referenceList') || '';
       aiModelsListInput.value = localStorage.getItem('aiModelsList') || '';
       githubTokenInput.value = localStorage.getItem('githubToken') || '';
       orchPathInput.value = localStorage.getItem('orchPath') || '';
